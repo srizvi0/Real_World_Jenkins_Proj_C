@@ -1,0 +1,56 @@
+pipeline {
+    agent any
+    
+    tools{
+        maven 'Maven'
+    }
+    
+
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/srizvi0/Real_World_Jenkins_Proj_C.git'
+            }
+        }
+        
+        stage('Maven Build'){
+            steps{
+                sh 'mvn clean install'
+            }
+        }
+        
+        stage('Docker build'){
+            steps{
+                withDockerRegistry(credentialsId: 'DockerCreds2', url: "") {
+                    sh 'docker build -t image03312 .'
+                }
+            }
+        }
+        
+        stage ('Docker Tag & Push'){
+            steps{
+                withDockerRegistry(credentialsId: 'DockerCreds2', url: "") {
+                    sh 'docker tag image03312 najamrizvi3/projc:latest'
+                    sh 'docker push najamrizvi3/projc:latest'
+                }
+            } 
+        }
+        stage ('Install Kubectl'){
+            steps{
+               sh 'curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.26.4/2023-05-11/bin/linux/amd64/kubectl'
+            }
+        }
+        stage ('Deploy'){
+            steps{
+                sh 'aws eks update-kubeconfig --name cluster6 --region us-east-2'
+                sh 'kubectl get nodes'
+                sh 'kubectl apply -f Deployment.yml'
+            }
+        }
+        stage ('Get svc'){
+            steps{
+                sh 'kubectl get svc'
+            }
+        }
+    }
+}
